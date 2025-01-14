@@ -13,9 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shader">
+      <UniqueIdentifier>{922c1b56-6875-48da-997f-b1aaf8e6cd90}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+    <None Include="shaders.hlsl">
+      <Filter>Shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -33,6 +39,9 @@
     <ClInclude Include="dx11Common.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CreateSwapChain.cpp">
@@ -47,5 +56,13 @@
     <ClCompile Include="dx11Graphics.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="PixelShader.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShader.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

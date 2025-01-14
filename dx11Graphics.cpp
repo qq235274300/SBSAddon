@@ -1,4 +1,6 @@
 #include "dx11Graphics.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 dx11Graphics::dx11Graphics()
 	:CreateSwapChainSuccess(false)
@@ -16,6 +18,9 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 	hResult = baseDevice->QueryInterface(__uuidof(ID3D11Device1), (void **)&pDevice);
 	assert(SUCCEEDED(hResult));
 
+	//直接用ID3D11Device1 获取context 测试
+	 pDevice->GetImmediateContext1(&pContext);
+	 assert(pContext);
 
 	//// 1. 创建一个 DXGI_SWAP_CHAIN_DESC 结构
 	//DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
@@ -99,13 +104,180 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 #endif
 	}
 
-	//创建各种
+	//创建renderTarget
+	bool createTargetState  = win32CreateD3D11RenderTargets(pDevice.Get(),pSwapChain.Get());
+	assert(createTargetState);
+
+	//创建ID3D11VertexShader ID3D11PixelShader ID3D11InputLayout ID3D11SamplerState ID3D11ShaderResourceView
+	{
+		ID3DBlob *vsBlob;
+		{
+			ID3DBlob *shaderCompileErrorsBlob;
+			HRESULT hResult = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "vs_main", "vs_5_0", 0, 0, &vsBlob, &shaderCompileErrorsBlob);
+			if (FAILED(hResult))
+			{
+				const char *errorString = NULL;
+				if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+					errorString = "Could not compile shader; file not found";
+				else if (shaderCompileErrorsBlob) {
+					errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+					shaderCompileErrorsBlob->Release();
+				}
+				MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
+			}
+
+			hResult = pDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &pVertexShader);
+			assert(SUCCEEDED(hResult));
+		}
 
 
+		// Create Pixel Shader
+		{
+			ID3DBlob *psBlob;
+			ID3DBlob *shaderCompileErrorsBlob;
+			HRESULT hResult = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, &shaderCompileErrorsBlob);
+			if (FAILED(hResult))
+			{
+				const char *errorString = NULL;
+				if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+					errorString = "Could not compile shader; file not found";
+				else if (shaderCompileErrorsBlob) {
+					errorString = (const char *)shaderCompileErrorsBlob->GetBufferPointer();
+					shaderCompileErrorsBlob->Release();
+				}
+				MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
+			}
 
+			hResult = pDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pPixelShader);
+			assert(SUCCEEDED(hResult));
+			psBlob->Release();
+		}
+
+
+		// Create Input Layout
+		{
+			D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
+			{
+				{ "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				{ "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+			};
+
+			HRESULT hResult = pDevice->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &pInputLayout);
+			assert(SUCCEEDED(hResult));
+			vsBlob->Release();
+		}
+
+	}
+
+	//创建vertexBuffer Sampler  ShaderResourceView
+	{
+		float vertexData[] = { // x, y, u, v
+		   -0.5f,  0.5f, 0.f, 0.f,
+		   0.5f, -0.5f, 1.f, 1.f,
+		   -0.5f, -0.5f, 0.f, 1.f,
+		   -0.5f,  0.5f, 0.f, 0.f,
+		   0.5f,  0.5f, 1.f, 0.f,
+		   0.5f, -0.5f, 1.f, 1.f
+		};
+		stride = 4 * sizeof(float);
+		numVerts = sizeof(vertexData) / stride;
+		offset = 0;
+
+		D3D11_BUFFER_DESC vertexBufferDesc = {};
+		vertexBufferDesc.ByteWidth = sizeof(vertexData);
+		vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+		D3D11_SUBRESOURCE_DATA vertexSubresourceData = { vertexData };
+
+		HRESULT hResult = pDevice->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &pVertexBuffer);
+		assert(SUCCEEDED(hResult));
+
+
+		// Create Sampler State
+		D3D11_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+		samplerDesc.BorderColor[0] = 1.0f;
+		samplerDesc.BorderColor[1] = 1.0f;
+		samplerDesc.BorderColor[2] = 1.0f;
+		samplerDesc.BorderColor[3] = 1.0f;
+		samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		pDevice->CreateSamplerState(&samplerDesc, &pSamplerState);
+	}
+
+	//测试加载图片
+	{
+		// Load Image
+		int texWidth, texHeight, texNumChannels;
+		int texForceNumChannels = 4;
+		unsigned char *testTextureBytes = stbi_load("testTexture.png", &texWidth, &texHeight,
+													&texNumChannels, texForceNumChannels);
+		assert(testTextureBytes);
+		int texBytesPerRow = 4 * texWidth;
+
+		// Create Texture
+		D3D11_TEXTURE2D_DESC textureDesc = {};
+		textureDesc.Width = texWidth;
+		textureDesc.Height = texHeight;
+		textureDesc.MipLevels = 1;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		D3D11_SUBRESOURCE_DATA textureSubresourceData = {};
+		textureSubresourceData.pSysMem = testTextureBytes;
+		textureSubresourceData.SysMemPitch = texBytesPerRow;
+
+		
+		pDevice->CreateTexture2D(&textureDesc, &textureSubresourceData, &pTexture);
+
+		pDevice->CreateShaderResourceView(pTexture.Get(), nullptr, &pSRV);
+
+		free(testTextureBytes);
+	}
+
+}
+
+void dx11Graphics::TryPresent()
+{
+	FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
+	
+	pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);
 }
 
 bool dx11Graphics::GetCreateSwapChainState() const
 {
 	return CreateSwapChainSuccess;
+}
+
+bool dx11Graphics::win32CreateD3D11RenderTargets(ID3D11Device1 *d3d11Device, IDXGISwapChain1 *swapChain)
+{
+	ID3D11Texture2D *d3d11FrameBuffer;
+	HRESULT hResult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&d3d11FrameBuffer);
+	assert(SUCCEEDED(hResult));
+
+	hResult = d3d11Device->CreateRenderTargetView(d3d11FrameBuffer, 0, &pTarget);
+	assert(SUCCEEDED(hResult));
+
+	D3D11_TEXTURE2D_DESC depthBufferDesc;
+	d3d11FrameBuffer->GetDesc(&depthBufferDesc);
+
+	d3d11FrameBuffer->Release();
+
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+	ID3D11Texture2D *depthBuffer;
+	d3d11Device->CreateTexture2D(&depthBufferDesc, nullptr, &depthBuffer);
+
+	d3d11Device->CreateDepthStencilView(depthBuffer, nullptr, &pDSV);
+
+	depthBuffer->Release();
+
+	return true;
 }

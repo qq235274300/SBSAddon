@@ -5,7 +5,14 @@
       <FullPath>D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Debug\CreateSwapChain.addon64</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
-  <ContentFiles />
+  <ContentFiles>
+    <ContentFile>
+      <FullPath>D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Debug\PixelShader.cso</FullPath>
+    </ContentFile>
+    <ContentFile>
+      <FullPath>D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Debug\VertexShader.cso</FullPath>
+    </ContentFile>
+  </ContentFiles>
   <SatelliteDlls />
   <NonRecipeFileRefs />
 </Project>
