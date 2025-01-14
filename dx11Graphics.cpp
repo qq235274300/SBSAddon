@@ -250,10 +250,9 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		free(testTextureBytes);
 	}
 
-	D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)1024, (FLOAT)768, 0.0f, 1.0f };
-	pContext->RSSetViewports(1, &viewport);
+	FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
 
-	pContext->OMSetRenderTargets(1, &pTarget, nullptr);
+	pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);
 
 
 	CanPresent = true;
