@@ -1,0 +1,6 @@
+﻿  dllmain.cpp
+LINK : warning LNK4075: 忽略“/INCREMENTAL”(由于“/OPT:ICF”规范)
+CreateSwapChain.obj : warning LNK4075: 忽略“/EDITANDCONTINUE”(由于“/OPT:ICF”规范)
+    正在创建库 D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Release\CreateSwapChain.lib 和对象 D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Release\CreateSwapChain.exp
+  CreateSwapChain.vcxproj -> D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Release\CreateSwapChain.addon64
+  已复制         1 个文件。
