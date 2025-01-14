@@ -3,7 +3,9 @@
 #define NOMINMAX
 #define UNICODE
 #include <SDKDDKVer.h>
-
-
 #include <windows.h>
+
 #include <reshade.hpp>
+#include <assert.h>
+
+using namespace reshade;
