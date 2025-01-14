@@ -3,8 +3,14 @@
 #include "stb_image.h"
 
 dx11Graphics::dx11Graphics()
-	:CreateSwapChainSuccess(false)
+	:CreateSwapChainSuccess(false),CanPresent(false)
 {
+	reshade::log::message(reshade::log::level::info,"dx11Graphics Construct");
+}
+
+dx11Graphics::~dx11Graphics()
+{
+	reshade::log::message(reshade::log::level::info, "dx11Graphics DeConstruct");
 }
 
 void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
@@ -17,10 +23,13 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 	// 假设你已经有了设备和窗口句柄
 	hResult = baseDevice->QueryInterface(__uuidof(ID3D11Device1), (void **)&pDevice);
 	assert(SUCCEEDED(hResult));
-
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext>baseContext;
+	reinterpret_cast<ID3D11Device *>(device->get_native())->GetImmediateContext(&baseContext);
 	//直接用ID3D11Device1 获取context 测试
-	 pDevice->GetImmediateContext1(&pContext);
-	 assert(pContext);
+	hResult = baseContext->QueryInterface(__uuidof(ID3D11DeviceContext1), (void **)&pContext);
+	assert(SUCCEEDED(hResult));
+	/* pDevice->GetImmediateContext1(&pContext);
+	 assert(pContext)*/;
 
 	//// 1. 创建一个 DXGI_SWAP_CHAIN_DESC 结构
 	//DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
@@ -241,13 +250,56 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		free(testTextureBytes);
 	}
 
+	D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)1024, (FLOAT)768, 0.0f, 1.0f };
+	pContext->RSSetViewports(1, &viewport);
+
+	pContext->OMSetRenderTargets(1, &pTarget, nullptr);
+
+
+	CanPresent = true;
 }
 
 void dx11Graphics::TryPresent()
 {
-	FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
+	if (CanPresent)
+	{
+		FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
+
+		pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);
+
+		//D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)1024, (FLOAT)768, 0.0f, 1.0f };
+		//pContext->RSSetViewports(1, &viewport);
+
+		//pContext->OMSetRenderTargets(1, &pTarget, nullptr);
+
+		//pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//pContext->IASetInputLayout(pInputLayout.Get());
+
+		//pContext->VSSetShader(pVertexShader.Get(), nullptr, 0);
+		//pContext->PSSetShader(pPixelShader.Get(), nullptr, 0);
+
+		//pContext->PSSetShaderResources(0, 1, &pSRV);
+		//pContext->PSSetSamplers(0, 1, &pSamplerState);
+
+		//pContext->IASetVertexBuffers(0, 1, &pVertexBuffer, &stride, &offset);
+
+		//pContext->Draw(numVerts, 0);
+
+		pSwapChain->Present(1, 0);
+	}
 	
-	pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);
+}
+
+void dx11Graphics::CheckRenderTargetValid()
+{
+	if (pTarget)
+	{
+		
+	}
+	else
+	{
+		MessageBoxA(0, "errorString", "pTargetw Empty", MB_ICONERROR | MB_OK);
+	}
 }
 
 bool dx11Graphics::GetCreateSwapChainState() const

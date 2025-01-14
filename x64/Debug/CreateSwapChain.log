@@ -1,5 +1,6 @@
 ﻿  dllmain.cpp
   dx11Graphics.cpp
   正在生成代码...
+    正在创建库 D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Debug\CreateSwapChain.lib 和对象 D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Debug\CreateSwapChain.exp
   CreateSwapChain.vcxproj -> D:\Lenovo_POC\LegionGlasses\reshade\examples\x64\Debug\CreateSwapChain.addon64
   已复制         1 个文件。

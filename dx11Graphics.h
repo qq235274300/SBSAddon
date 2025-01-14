@@ -14,15 +14,17 @@ class dx11Graphics
 
 public:
 	dx11Graphics();
-
+	~dx11Graphics();
 	void TryCreateSwapChainforWnd(api::device *device,HWND _hwnd);
 	void TryPresent();
+	void CheckRenderTargetValid();
 public:
 	bool GetCreateSwapChainState()const ;
 private:
 	bool win32CreateD3D11RenderTargets(ID3D11Device1 *d3d11Device, IDXGISwapChain1 *swapChain);
 private:
 	bool CreateSwapChainSuccess = false;
+	bool CanPresent = false;
 	Microsoft::WRL::ComPtr<ID3D11Device1> pDevice;
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapChain;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext1> pContext;
