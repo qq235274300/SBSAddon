@@ -7,6 +7,7 @@ dx11Graphics::dx11Graphics()
 
 void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 {
+	
 	HRESULT hResult;
 	
 	ID3D11Device *baseDevice = reinterpret_cast<ID3D11Device *>(device->get_native());
@@ -97,6 +98,8 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 
 #endif
 	}
+
+	//创建各种
 
 
 
