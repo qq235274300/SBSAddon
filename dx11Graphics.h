@@ -16,8 +16,10 @@ public:
 	dx11Graphics();
 	~dx11Graphics();
 	void TryCreateSwapChainforWnd(api::device *device,HWND _hwnd);
-	void TryPresent();
+	void TryPresent(HWND _hwnd);
 	void CheckRenderTargetValid();
+	void DrawTestTriangle();
+	void ClearBuffer(float red, float green, float blue);
 public:
 	bool GetCreateSwapChainState()const ;
 private:
@@ -27,7 +29,9 @@ private:
 	bool CanPresent = false;
 	Microsoft::WRL::ComPtr<ID3D11Device1> pDevice;
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapChain;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext1> pContext;
+
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> pContext;
+	//Microsoft::WRL::ComPtr<ID3D11DeviceContext1> pContext;
 
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> pTarget;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> pDSV;
