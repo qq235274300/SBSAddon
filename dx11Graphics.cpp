@@ -3,7 +3,7 @@
 #include "stb_image.h"
 
 dx11Graphics::dx11Graphics()
-	:CreateSwapChainSuccess(false),CanPresent(false)
+	:CreateSwapChainSuccess(false),CanPresent(false), swapchainEvent(SwapchainEvent::init)
 {
 	reshade::log::message(reshade::log::level::info,"dx11Graphics Construct");
 }
@@ -113,6 +113,7 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		dxgiFactory->Release();
 
 		CreateSwapChainSuccess = true;
+	
 
 #endif
 	}
@@ -254,9 +255,14 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 	//	free(testTextureBytes);
 	//}
 
-Microsoft::WRL::ComPtr<ID3D11Resource> pBackBuffer;
-pSwapChain->GetBuffer(0, __uuidof(ID3D11Resource), &pBackBuffer);
-pDevice->CreateRenderTargetView(pBackBuffer.Get(), nullptr, &pTarget);
+
+
+
+ID3D11Texture2D *pBackBuffer;
+pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *)&pBackBuffer);
+pDevice->CreateRenderTargetView(pBackBuffer, NULL, &pTarget);
+pBackBuffer->Release();
+
 
 
 	CanPresent = true;
@@ -314,109 +320,112 @@ void dx11Graphics::DrawTestTriangle()
 	{
 		MessageBoxA(0, "errorString", "pTargetw Empty", MB_ICONERROR | MB_OK);
 	}
-	ClearBuffer(1.0f, 0.0f, 0.0f);
+	ClearBuffer();
 	HRESULT hr;
 
-	struct Vertex
-	{
-		float x;
-		float y;
-		float r;
-		float g;
-		float b;
-	};
+	//struct Vertex
+	//{
+	//	float x;
+	//	float y;
+	//	float r;
+	//	float g;
+	//	float b;
+	//};
 
-	// create vertex buffer (1 2d triangle at center of screen)
-	const Vertex vertices[] =
-	{
-		{ 0.0f,0.5f,1.0f,0.0f,0.0f },
-		{ 0.5f,-0.5f,0.0f,1.0f,0.0f },
-		{ -0.5f,-0.5f,0.0f,0.0f,1.0f },
-	};
-	Microsoft::WRL::ComPtr<ID3D11Buffer> pVertexBuffer;
-	D3D11_BUFFER_DESC bd = {};
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.CPUAccessFlags = 0u;
-	bd.MiscFlags = 0u;
-	bd.ByteWidth = sizeof(vertices);
-	bd.StructureByteStride = sizeof(Vertex);
-	D3D11_SUBRESOURCE_DATA sd = {};
-	sd.pSysMem = vertices;
-	pDevice->CreateBuffer(&bd, &sd, &pVertexBuffer);
+	//// create vertex buffer (1 2d triangle at center of screen)
+	//const Vertex vertices[] =
+	//{
+	//	{ 0.0f,0.5f,1.0f,0.0f,0.0f },
+	//	{ 0.5f,-0.5f,0.0f,1.0f,0.0f },
+	//	{ -0.5f,-0.5f,0.0f,0.0f,1.0f },
+	//};
+	//Microsoft::WRL::ComPtr<ID3D11Buffer> pVertexBuffer;
+	//D3D11_BUFFER_DESC bd = {};
+	//bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	//bd.Usage = D3D11_USAGE_DEFAULT;
+	//bd.CPUAccessFlags = 0u;
+	//bd.MiscFlags = 0u;
+	//bd.ByteWidth = sizeof(vertices);
+	//bd.StructureByteStride = sizeof(Vertex);
+	//D3D11_SUBRESOURCE_DATA sd = {};
+	//sd.pSysMem = vertices;
+	//pDevice->CreateBuffer(&bd, &sd, &pVertexBuffer);
 
-	// Bind vertex buffer to pipeline
-	const UINT stride = sizeof(Vertex);
-	const UINT offset = 0u;
-	pContext->IASetVertexBuffers(0u, 1u, pVertexBuffer.GetAddressOf(), &stride, &offset);
-
-
-	// create pixel shader
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> pPixelShader;
-	Microsoft::WRL::ComPtr<ID3DBlob> pBlob;
-	D3DReadFileToBlob(L"PixelShader.cso", &pBlob);
-	pDevice->CreatePixelShader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(), nullptr, &pPixelShader);
-
-	// bind pixel shader
-	pContext->PSSetShader(pPixelShader.Get(), nullptr, 0u);
+	//// Bind vertex buffer to pipeline
+	//const UINT stride = sizeof(Vertex);
+	//const UINT offset = 0u;
+	//pContext->IASetVertexBuffers(0u, 1u, pVertexBuffer.GetAddressOf(), &stride, &offset);
 
 
-	// create vertex shader
-	Microsoft::WRL::ComPtr<ID3D11VertexShader> pVertexShader;
-	D3DReadFileToBlob(L"VertexShader.cso", &pBlob);
-	pDevice->CreateVertexShader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(), nullptr, &pVertexShader);
+	//// create pixel shader
+	//Microsoft::WRL::ComPtr<ID3D11PixelShader> pPixelShader;
+	//Microsoft::WRL::ComPtr<ID3DBlob> pBlob;
+	//D3DReadFileToBlob(L"PixelShader.cso", &pBlob);
+	//pDevice->CreatePixelShader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(), nullptr, &pPixelShader);
 
-	// bind vertex shader
-	pContext->VSSetShader(pVertexShader.Get(), nullptr, 0u);
-
-
-	// input (vertex) layout (2d position only)
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> pInputLayout;
-	const D3D11_INPUT_ELEMENT_DESC ied[] =
-	{
-		{ "Position",0,DXGI_FORMAT_R32G32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0 },
-		{ "Color",0,DXGI_FORMAT_R32G32B32_FLOAT,0,8u,D3D11_INPUT_PER_VERTEX_DATA,0 },
-	};
-	pDevice->CreateInputLayout(
-		ied, (UINT)std::size(ied),
-		pBlob->GetBufferPointer(),
-		pBlob->GetBufferSize(),
-		&pInputLayout
-	);
-
-	// bind vertex layout
-	pContext->IASetInputLayout(pInputLayout.Get());
+	//// bind pixel shader
+	//pContext->PSSetShader(pPixelShader.Get(), nullptr, 0u);
 
 
-	// bind render target
-	pContext->OMSetRenderTargets(1u, pTarget.GetAddressOf(), nullptr);
+	//// create vertex shader
+	//Microsoft::WRL::ComPtr<ID3D11VertexShader> pVertexShader;
+	//D3DReadFileToBlob(L"VertexShader.cso", &pBlob);
+	//pDevice->CreateVertexShader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(), nullptr, &pVertexShader);
+
+	//// bind vertex shader
+	//pContext->VSSetShader(pVertexShader.Get(), nullptr, 0u);
 
 
-	// Set primitive topology to triangle list (groups of 3 vertices)
-	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//// input (vertex) layout (2d position only)
+	//Microsoft::WRL::ComPtr<ID3D11InputLayout> pInputLayout;
+	//const D3D11_INPUT_ELEMENT_DESC ied[] =
+	//{
+	//	{ "Position",0,DXGI_FORMAT_R32G32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0 },
+	//	{ "Color",0,DXGI_FORMAT_R32G32B32_FLOAT,0,8u,D3D11_INPUT_PER_VERTEX_DATA,0 },
+	//};
+	//pDevice->CreateInputLayout(
+	//	ied, (UINT)std::size(ied),
+	//	pBlob->GetBufferPointer(),
+	//	pBlob->GetBufferSize(),
+	//	&pInputLayout
+	//);
+
+	//// bind vertex layout
+	//pContext->IASetInputLayout(pInputLayout.Get());
 
 
-	// configure viewport
-	D3D11_VIEWPORT vp;
-	vp.Width = 1024;
-	vp.Height = 768;
-	vp.MinDepth = 0;
-	vp.MaxDepth = 1;
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	pContext->RSSetViewports(1u, &vp);
+	//// bind render target
+	//pContext->OMSetRenderTargets(1u, pTarget.GetAddressOf(), nullptr);
 
 
-	pContext->Draw((UINT)std::size(vertices), 0u);
+	//// Set primitive topology to triangle list (groups of 3 vertices)
+	//pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
+	//// configure viewport
+	//D3D11_VIEWPORT vp;
+	//vp.Width = 1024;
+	//vp.Height = 768;
+	//vp.MinDepth = 0;
+	//vp.MaxDepth = 1;
+	//vp.TopLeftX = 0;
+	//vp.TopLeftY = 0;
+	//pContext->RSSetViewports(1u, &vp);
+
+
+	//pContext->Draw((UINT)std::size(vertices), 0u);
 
 	//Present时候会阻断现在reshade的Present
 	pSwapChain->Present(1u, 0u);
 }
 
-void dx11Graphics::ClearBuffer(float red, float green, float blue)
+void dx11Graphics::ClearBuffer()
 {
-	const float color[] = { red,green,blue,1.0f };
+	const float color[] = { 255.f,0.f,0.0f,1.0f };
+	pContext->OMSetRenderTargets(1, &pTarget, NULL);
 	pContext->ClearRenderTargetView(pTarget.Get(), color);
+
+	pSwapChain->Present(1u, 0u);
 }
 
 
@@ -424,6 +433,27 @@ void dx11Graphics::ClearBuffer(float red, float green, float blue)
 bool dx11Graphics::GetCreateSwapChainState() const
 {
 	return CreateSwapChainSuccess;
+}
+
+void dx11Graphics::MoveToNextEvent()
+{
+	switch (swapchainEvent)
+	{
+	case init:
+		swapchainEvent = SwapchainEvent::init_swapchain;
+		break;
+	case init_swapchain:
+		swapchainEvent = SwapchainEvent::create_swapchain;
+		break;
+	case create_swapchain:
+		swapchainEvent = SwapchainEvent::present;
+		break;
+	case present:
+		swapchainEvent = SwapchainEvent::init;
+		break;
+	default:
+		break;
+	}
 }
 
 bool dx11Graphics::win32CreateD3D11RenderTargets(ID3D11Device1 *d3d11Device, IDXGISwapChain1 *swapChain)

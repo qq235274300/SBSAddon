@@ -1,12 +1,15 @@
 ﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
 
 #include "dx11Graphics.h"
-
-
+#include <stdio.h>
+#include <sstream>
 HINSTANCE g_hInstance = nullptr;
 HWND g_hWnd = NULL;
 BOOL g_bExit = FALSE;
+HANDLE hThread = 0;
+static int count = 0;
 
+reshade::api::device* g_device;
 
 
 #define  Factory1
@@ -14,6 +17,7 @@ BOOL g_bExit = FALSE;
 struct __declspec(uuid("2FA5FB3D-7873-4E67-9DDA-5D449DB2CB47")) SBSRenderData
 {
 	dx11Graphics _dx11Graphics;
+	bool initSwapChainSuccess = false;
 };
 
 
@@ -40,7 +44,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 HWND CreateWindowInDLL()
 {
-	
+	//count++;
+	//char message[256]; // 缓冲区存储格式化后的消息
+	//snprintf(message, sizeof(message), "RegisterClassEx failed, count = %d", count);
+	//MessageBoxA(0, message, "Fatal Error", MB_OK);
+
 	{
 		WNDCLASSEXW winClass = {};
 		winClass.cbSize = sizeof(WNDCLASSEXW);
@@ -75,13 +83,16 @@ HWND CreateWindowInDLL()
 			ShowWindow(g_hWnd, SW_SHOWNORMAL);
 
 			//Move it to bottom
-			SetWindowPos(g_hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+			SetWindowPos(g_hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 			UpdateWindow(g_hWnd);
 		}
 	
 
+		
 
+		
+		
 		return g_hWnd;
 	}
 };
@@ -105,38 +116,65 @@ DWORD WINAPI WindowThread(LPVOID lpParam)
 
 static void on_init(reshade::api::device *device)
 {
+	reshade::unregister_event<reshade::addon_event::init_device>(on_init);
+	g_device = device;
+	g_device->create_private_data<SBSRenderData>();
+
+	hThread = CreateThread(NULL, 0, WindowThread, NULL, 0, NULL);
 
 	//窗口在线程创建的，等待它创建完
 	while (g_hWnd == NULL)
 		Sleep(10);
 
-	device->create_private_data<SBSRenderData>();
+	count++;
+	reshade::log::message(reshade::log::level::info, ("on_init countNumber: " + std::to_string(count)).c_str());
+
+	SBSRenderData &devData = g_device->get_private_data<SBSRenderData>();
+	devData._dx11Graphics.MoveToNextEvent();
 	
 }
 
 
 static void on_init_swapchain(reshade::api::swapchain *swapchain)
 {
+	SBSRenderData &devData = g_device->get_private_data<SBSRenderData>();
 	
+	////初始化数据
+	reshade::unregister_event<reshade::addon_event::init_swapchain>(on_init_swapchain);
+	
+	devData._dx11Graphics.TryCreateSwapChainforWnd(swapchain->get_device(), g_hWnd);
+	devData._dx11Graphics.MoveToNextEvent();
+
+	
+	count++;
+	reshade::log::message(reshade::log::level::info, ("on_init_swapchain countNumber: " + std::to_string(count)).c_str());
+	
+	
+}
+
+
+static bool on_create_swapchain(reshade::api::swapchain_desc &desc, void *)
+{
+	count++;
+	reshade::log::message(reshade::log::level::info, ("on_create_swapchain countNumber: " + std::to_string(count)).c_str());
+	return true;
 }
 
 static void on_init_command_queue( reshade::api::command_queue *queue)
 {
-	
-	
+	;
 }
 
 void on_present(api::command_queue *queue, api::swapchain *swapchain, const api::rect *source_rect, const api::rect *dest_rect, uint32_t dirty_rect_count, const api::rect *dirty_rects)
 {
-	SBSRenderData &devData = queue->get_device()->get_private_data<SBSRenderData>();
-	if (!devData._dx11Graphics.GetCreateSwapChainState())
-	{
-		devData._dx11Graphics.TryCreateSwapChainforWnd(queue->get_device(), g_hWnd);
-	}
+	
+	SBSRenderData &devData = g_device->get_private_data<SBSRenderData>();
 
-	/*devData._dx11Graphics.CheckRenderTargetValid();
-	devData._dx11Graphics.TryPresent(g_hWnd);*/
-	devData._dx11Graphics.DrawTestTriangle();
+	reshade::unregister_event<reshade::addon_event::present>(on_present);
+	devData._dx11Graphics.ClearBuffer();
+	reshade::register_event<reshade::addon_event::present>(on_present);
+	count++;
+	reshade::log::message(reshade::log::level::info, ("on_present countNumber: " + std::to_string(count)).c_str());
 }
 
 static void on_reshadepresent(api::effect_runtime *runtime)
@@ -145,38 +183,55 @@ static void on_reshadepresent(api::effect_runtime *runtime)
 
 }
 
+
+
 extern "C" __declspec(dllexport) const char *NAME = "SBS output";
 extern "C" __declspec(dllexport) const char *DESCRIPTION = "Duplicate SBS screen into double width buffer and output to glass.";
 
 
-HANDLE hThread = 0;
+
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
                      )
 {
+
+	
+	
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
 	{
-		g_hInstance = hModule;
-		hThread = CreateThread(NULL, 0, WindowThread, NULL, 0, NULL);
-
-		if (!reshade::register_addon(hModule))
-			return FALSE;
-
 		
+		//MessageBoxA(0, "CreateThread Window Failed", "Fatal Error", MB_OK);
+		if (!reshade::register_addon(hModule))
+		{
+			char message[256]; // 缓冲区存储格式化后的消息
+			snprintf(message, sizeof(message), " CreateSwapChain Addon register Failed!");
+			MessageBoxA(0, message, "Fatal Error", MB_OK);
+			return FALSE;
+		}
+			
+		
+		g_hInstance = hModule;
+			
 		reshade::register_event<reshade::addon_event::init_device>(on_init);
+		
+		//reshade::register_event<reshade::addon_event::reshade_present>(on_reshadepresent);
+		reshade::register_event<reshade::addon_event::init_swapchain>(on_init_swapchain);
+		reshade::register_event<reshade::addon_event::create_swapchain>(on_create_swapchain);
 		reshade::register_event<reshade::addon_event::present>(on_present);
-		//RESHADE_DEFINE_ADDON_EVENT_TRAITS(addon_event::reshade_present, void, api::effect_runtime * runtime);
-		//reshade::register_event <reshade::addon_event::init_swapchain>(on_init_swapchain);
-		//(addon_event::init_command_queue, void, api::command_queue *queue); 
-		//reshade::register_event <reshade::addon_event::init_command_queue>(on_init_command_queue);
 		
 	}
 	break;
 		
     case DLL_THREAD_ATTACH:
+	/*	if (g_hInstance == nullptr)
+		{
+			g_hInstance = hModule;
+			hThread = CreateThread(NULL, 0, WindowThread, NULL, 0, NULL);
+		}*/
+		break;
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
 		/*g_bExit = TRUE;

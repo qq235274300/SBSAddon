@@ -9,6 +9,13 @@
 
 #pragma comment(lib, "dxgi.lib")
 
+enum SwapchainEvent {
+	init,
+	init_swapchain,
+	create_swapchain,
+	present
+};
+
 class dx11Graphics
 {
 
@@ -19,9 +26,12 @@ public:
 	void TryPresent(HWND _hwnd);
 	void CheckRenderTargetValid();
 	void DrawTestTriangle();
-	void ClearBuffer(float red, float green, float blue);
+	void ClearBuffer();
 public:
 	bool GetCreateSwapChainState()const ;
+	void MoveToNextEvent();
+public:
+	SwapchainEvent swapchainEvent;
 private:
 	bool win32CreateD3D11RenderTargets(ID3D11Device1 *d3d11Device, IDXGISwapChain1 *swapChain);
 private:
@@ -48,5 +58,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> pSamplerState;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> pTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> pSRV;
+
+	//test
+	//Microsoft::WRL::ComPtr<ID3D11Resource> pBackBuffer;
 };
 
