@@ -19,7 +19,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="shaders.hlsl">
+    <None Include="SBSshader.hlsl">
       <Filter>Shader</Filter>
     </None>
   </ItemGroup>

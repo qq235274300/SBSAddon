@@ -122,7 +122,7 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		ID3DBlob *vsBlob;
 		{
 			ID3DBlob *shaderCompileErrorsBlob;
-			HRESULT hResult = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "vs_main", "vs_5_0", 0, 0, &vsBlob, &shaderCompileErrorsBlob);
+			HRESULT hResult = D3DCompileFromFile(L"SBSshader.hlsl", nullptr, nullptr, "vs_main", "vs_5_0", 0, 0, &vsBlob, &shaderCompileErrorsBlob);
 			if (FAILED(hResult))
 			{
 				const char *errorString = NULL;
@@ -144,7 +144,7 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		{
 			ID3DBlob *psBlob;
 			ID3DBlob *shaderCompileErrorsBlob;
-			HRESULT hResult = D3DCompileFromFile(L"shaders.hlsl", nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, &shaderCompileErrorsBlob);
+			HRESULT hResult = D3DCompileFromFile(L"SBSshader.hlsl", nullptr, nullptr, "ps_main", "ps_5_0", 0, 0, &psBlob, &shaderCompileErrorsBlob);
 			if (FAILED(hResult))
 			{
 				const char *errorString = NULL;
@@ -222,7 +222,7 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		// Load Image
 		int texWidth, texHeight, texNumChannels;
 		int texForceNumChannels = 4;
-		unsigned char *testTextureBytes = stbi_load("testTexture.png", &texWidth, &texHeight,
+		unsigned char *testTextureBytes = stbi_load("SBSTexture.png", &texWidth, &texHeight,
 													&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
 		int texBytesPerRow = 4 * texWidth;
@@ -250,9 +250,9 @@ void dx11Graphics::TryCreateSwapChainforWnd(api::device *device,  HWND _hwnd)
 		free(testTextureBytes);
 	}
 
-	FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
+	/*FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
 
-	pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);
+	pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);*/
 
 
 	CanPresent = true;
@@ -266,23 +266,23 @@ void dx11Graphics::TryPresent()
 
 		pContext->ClearRenderTargetView(pTarget.Get(), backgroundColor);
 
-		//D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)1024, (FLOAT)768, 0.0f, 1.0f };
-		//pContext->RSSetViewports(1, &viewport);
+		D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)1024, (FLOAT)768, 0.0f, 1.0f };
+		pContext->RSSetViewports(1, &viewport);
 
-		//pContext->OMSetRenderTargets(1, &pTarget, nullptr);
+		pContext->OMSetRenderTargets(1, &pTarget, nullptr);
 
-		//pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//pContext->IASetInputLayout(pInputLayout.Get());
+		pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pContext->IASetInputLayout(pInputLayout.Get());
 
-		//pContext->VSSetShader(pVertexShader.Get(), nullptr, 0);
-		//pContext->PSSetShader(pPixelShader.Get(), nullptr, 0);
+		pContext->VSSetShader(pVertexShader.Get(), nullptr, 0);
+		pContext->PSSetShader(pPixelShader.Get(), nullptr, 0);
 
-		//pContext->PSSetShaderResources(0, 1, &pSRV);
-		//pContext->PSSetSamplers(0, 1, &pSamplerState);
+		pContext->PSSetShaderResources(0, 1, &pSRV);
+		pContext->PSSetSamplers(0, 1, &pSamplerState);
 
-		//pContext->IASetVertexBuffers(0, 1, &pVertexBuffer, &stride, &offset);
+		pContext->IASetVertexBuffers(0, 1, &pVertexBuffer, &stride, &offset);
 
-		//pContext->Draw(numVerts, 0);
+		pContext->Draw(numVerts, 0);
 
 		pSwapChain->Present(1, 0);
 	}

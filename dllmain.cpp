@@ -135,7 +135,7 @@ void on_present(api::command_queue *queue, api::swapchain *swapchain, const api:
 	}
 
 	devData._dx11Graphics.CheckRenderTargetValid();
-	//devData._dx11Graphics.TryPresent();
+	devData._dx11Graphics.TryPresent();
 }
 
 static void on_reshadepresent(api::effect_runtime *runtime)

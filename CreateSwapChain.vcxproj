@@ -189,7 +189,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
     </FxCompile>
-    <None Include="shaders.hlsl">
+    <None Include="SBSshader.hlsl">
       <FileType>Document</FileType>
     </None>
     <FxCompile Include="VertexShader.hlsl">
